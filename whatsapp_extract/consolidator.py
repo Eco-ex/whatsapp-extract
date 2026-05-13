@@ -68,7 +68,7 @@ def _sort_records(records: list[dict], cfg: Config) -> list[dict]:
     return sorted(records, key=sort_key)
 
 
-def _export(records: list[dict], cfg: Config) -> list[Path]:
+def _export(records: list[dict], cfg: Config, basename: str | None = None) -> list[Path]:
     import pandas as pd
 
     cfg.output_dir.mkdir(parents=True, exist_ok=True)
@@ -76,13 +76,14 @@ def _export(records: list[dict], cfg: Config) -> list[Path]:
 
     field_order = [f.name for f in cfg.schema.fields]
     df = pd.DataFrame(records, columns=field_order)
+    basename = basename or cfg.project_name
 
     if "csv" in cfg.consolidation.output_formats:
-        out = cfg.output_dir / f"{cfg.project_name}.csv"
+        out = cfg.output_dir / f"{basename}.csv"
         df.to_csv(out, index=False)
         out_paths.append(out)
     if "json" in cfg.consolidation.output_formats:
-        out = cfg.output_dir / f"{cfg.project_name}.json"
+        out = cfg.output_dir / f"{basename}.json"
         with out.open("w", encoding="utf-8") as f:
             json.dump(records, f, ensure_ascii=False, indent=2)
         out_paths.append(out)
@@ -147,10 +148,12 @@ def run(cfg: Config) -> list[Path]:
         all_records.extend(payload.get("records") or [])
 
     raw_count = len(all_records)
+    sorted_raw = _sort_records(all_records, cfg)
     deduped = _dedup(all_records, cfg)
     sorted_records = _sort_records(deduped, cfg)
 
     out_paths = _export(sorted_records, cfg)
+    out_paths.extend(_export(sorted_raw, cfg, basename=f"{cfg.project_name}_no_deduplication"))
     _quality_report(raw_count, sorted_records, cfg)
     for p in out_paths:
         print(f"[consolidate] Wrote {p}")
