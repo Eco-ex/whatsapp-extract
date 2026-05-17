@@ -7,6 +7,16 @@ from pathlib import Path
 
 from .config_loader import Config
 
+# Fields the classifier actually reads from each message. Other fields parsed
+# upstream (date, time, raw) are dropped at batch-write time to slim the prompt
+# input and the on-disk batch files. `raw` is still needed by filter.py for
+# system-pattern matching, so this trim happens here, not in parser.py.
+_BATCH_FIELDS = ("id", "datetime", "sender", "body")
+
+
+def _slim(message: dict) -> dict:
+    return {k: message[k] for k in _BATCH_FIELDS if k in message}
+
 
 def run(cfg: Config) -> Path:
     """Read filtered messages and write batch_NNN.json files. Returns the batch dir."""
@@ -57,8 +67,8 @@ def run(cfg: Config) -> Path:
                 "from": chunk[0]["date"],
                 "to": chunk[-1]["date"],
             },
-            "context_messages": ctx,
-            "messages": chunk,
+            "context_messages": [_slim(m) for m in ctx],
+            "messages": [_slim(m) for m in chunk],
         }
         out_path = out_dir / f"{batch_id}.json"
         with out_path.open("w", encoding="utf-8") as f:
