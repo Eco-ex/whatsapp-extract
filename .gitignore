@@ -218,14 +218,13 @@ __marimo__/
 .streamlit/secrets.toml
 
 # whatsapp-extract: runtime data and outputs
-data/raw/
-data/parsed/
-data/filtered/
-data/batches/
-data/batches_pending/
-data/results/
+data/
 output/
+toon_examples/
 
 # whatsapp-extract: per-project configs (schema, training data, ground truth)
 configs/
 
+scripts/
+
+TOON_EVALUATION.md
